@@ -515,7 +515,3 @@ if (document.readyState === 'loading') {
 } else {
     new PMSimulator();
 }
-npm install -g supabase
-supabase login
-./upload-to-supabase.sh
-
