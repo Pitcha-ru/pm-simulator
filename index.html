@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Simulator - Task Board Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loader"></div>
+        <p>Загрузка игры...</p>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="start-screen hidden">
+        <div class="start-panel">
+            <h1 class="game-logo">🎮 PM Simulator</h1>
+            <p class="game-subtitle">Распределяйте задачи по отделам</p>
+            
+            <div class="start-form">
+                <label for="player-name-input" class="input-label">Введите ваше имя:</label>
+                <input 
+                    type="text" 
+                    id="player-name-input" 
+                    class="player-name-input" 
+                    placeholder="Ваше имя"
+                    maxlength="20"
+                    autocomplete="off"
+                />
+                <button id="start-game-button" class="btn-primary btn-large">Начать игру</button>
+            </div>
+            
+            <div class="start-leaderboard">
+                <h3 class="leaderboard-title">🏆 Топ-5 игроков</h3>
+                <div id="start-leaderboard-list" class="leaderboard-list">
+                    <p class="empty-leaderboard">Пока нет результатов</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="error-screen hidden">
+        <div class="error-panel">
+            <h2>Ошибка загрузки</h2>
+            <p id="error-message"></p>
+            <button id="retry-button" class="btn-primary">Повторить попытку</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="gameover-screen hidden">
+        <div class="gameover-panel">
+            <h1 class="gameover-title">Игра окончена!</h1>
+            
+            <div class="player-result">
+                <p id="player-name-display" class="player-name">Игрок</p>
+                <p id="player-rank-display" class="player-rank">Место: #1</p>
+            </div>
+            
+            <div class="gameover-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Финальный счёт</span>
+                    <span id="final-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Достигнутый уровень</span>
+                    <span id="final-level" class="stat-value">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Задач выполнено</span>
+                    <span id="final-tasks" class="stat-value">0</span>
+                </div>
+            </div>
+            
+            <div class="gameover-leaderboard">
+                <h3 class="leaderboard-title">🏆 Топ-5 игроков</h3>
+                <div id="gameover-leaderboard-list" class="leaderboard-list"></div>
+            </div>
+            
+            <button id="restart-button" class="btn-primary btn-large">Играть снова</button>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" class="game-container hidden">
+        <!-- Top Header -->
+        <header class="top-header">
+            <!-- Author Event Panel -->
+            <div class="author-panel">
+                <div class="author-avatar-wrapper">
+                    <img id="author-avatar" src="" alt="Author" class="author-avatar">
+                </div>
+                <div class="author-info">
+                    <div id="author-name" class="author-name">Автор</div>
+                    <div class="speech-bubble">
+                        <p id="author-message" class="author-message"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scoreboard -->
+            <div class="scoreboard">
+                <div class="score-item">
+                    <span class="label">Очки:</span>
+                    <span id="score-value" class="value">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">Уровень:</span>
+                    <span id="level-value" class="value">1</span>
+                </div>
+                <div class="score-item streak-display">
+                    <span class="label">Серия:</span>
+                    <span id="streak-value" class="value">x1.00</span>
+                </div>
+                <div class="score-item lives-display">
+                    <span class="label">Жизни:</span>
+                    <span id="lives-value" class="value">❤️ 3</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Center Board Area -->
+        <main class="board-area">
+            <div class="board-background">
+                <!-- Task Cards Container (dynamic) -->
+                <div id="tasks-container" class="tasks-container">
+                    <!-- Task cards will be dynamically inserted here -->
+                </div>
+
+                <!-- Success/Fail Feedback -->
+                <div id="feedback-message" class="feedback-message hidden"></div>
+            </div>
+        </main>
+
+        <!-- Bottom Departments Dock -->
+        <footer class="departments-dock">
+            <div id="departments-container" class="departments-container">
+                <!-- Department blocks will be dynamically inserted here -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
+

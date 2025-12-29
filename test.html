@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PM Simulator - Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f4f5f7;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #34c759; }
+        .error { color: #ff3b30; }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 PM Simulator - Diagnostic Page</h1>
+    
+    <div class="test-section">
+        <h2>1. JavaScript Module Support</h2>
+        <p id="js-test">Testing...</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. JSON Files Loading</h2>
+        <div id="json-test">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Game Data Loader</h2>
+        <div id="loader-test">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Console Output</h2>
+        <p>Open browser console (F12) for detailed logs</p>
+        <pre id="console-output"></pre>
+    </div>
+
+    <script type="module">
+        console.log('=== PM Simulator Diagnostic ===');
+        
+        // Test 1: JS Module
+        document.getElementById('js-test').innerHTML = 
+            '<span class="success">✅ JavaScript modules work!</span>';
+        console.log('✅ JS modules OK');
+        
+        // Test 2: JSON files
+        const jsonFiles = [
+            'departments.json',
+            'config.json',
+            'task_authors.json',
+            'priority_comments.json'
+        ];
+        
+        const jsonTestDiv = document.getElementById('json-test');
+        jsonTestDiv.innerHTML = '<p>Loading JSON files...</p>';
+        
+        Promise.all(
+            jsonFiles.map(file => 
+                fetch('/' + file)
+                    .then(r => {
+                        console.log(`Fetching ${file}: ${r.status} ${r.statusText}`);
+                        return r.ok ? r.json() : Promise.reject(`${r.status} ${r.statusText}`);
+                    })
+                    .then(data => ({ file, success: true, size: JSON.stringify(data).length }))
+                    .catch(err => ({ file, success: false, error: err }))
+            )
+        ).then(results => {
+            let html = '<ul>';
+            results.forEach(r => {
+                if (r.success) {
+                    html += `<li class="success">✅ ${r.file} (${r.size} bytes)</li>`;
+                    console.log(`✅ ${r.file} loaded`);
+                } else {
+                    html += `<li class="error">❌ ${r.file}: ${r.error}</li>`;
+                    console.error(`❌ ${r.file} failed:`, r.error);
+                }
+            });
+            html += '</ul>';
+            jsonTestDiv.innerHTML = html;
+        });
+        
+        // Test 3: Game Data Loader
+        const loaderTestDiv = document.getElementById('loader-test');
+        loaderTestDiv.innerHTML = '<p>Loading game data...</p>';
+        
+        try {
+            const { loadGameData } = await import('./js/supabaseLoader.js');
+            console.log('✅ supabaseLoader.js imported');
+            
+            loadGameData()
+                .then(gameData => {
+                    console.log('✅ Game data loaded:', gameData);
+                    loaderTestDiv.innerHTML = `
+                        <p class="success">✅ Game data loaded successfully!</p>
+                        <ul>
+                            <li>Departments: ${gameData.departments.departments.length}</li>
+                            <li>Authors: ${gameData.taskAuthors.author.length}</li>
+                            <li>Priorities: ${Object.keys(gameData.priorityComments.priority_commentary).length}</li>
+                            <li>Config loaded: ✅</li>
+                        </ul>
+                    `;
+                })
+                .catch(err => {
+                    console.error('❌ Game data loading failed:', err);
+                    loaderTestDiv.innerHTML = `
+                        <p class="error">❌ Failed to load game data</p>
+                        <pre>${err.message}\n${err.stack}</pre>
+                    `;
+                });
+        } catch (err) {
+            console.error('❌ Failed to import loader:', err);
+            loaderTestDiv.innerHTML = `
+                <p class="error">❌ Failed to import supabaseLoader.js</p>
+                <pre>${err.message}\n${err.stack}</pre>
+            `;
+        }
+        
+        // Test 4: Main app
+        setTimeout(() => {
+            const consoleOutput = document.getElementById('console-output');
+            consoleOutput.textContent = 'Check browser console (F12) for detailed output';
+        }, 1000);
+    </script>
+</body>
+</html>
+

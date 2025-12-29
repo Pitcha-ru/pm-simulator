@@ -1,0 +1,16 @@
+# Cloudflare Pages Configuration (optional)
+# This file is not required for basic deployment but can be used for advanced settings
+
+name = "pm-simulator"
+compatibility_date = "2024-01-01"
+
+# Pages configuration
+[site]
+# Build configuration is handled in Cloudflare dashboard
+# but can be specified here as well
+bucket = "./dist"
+
+# Environment variables (optional - better to set in Cloudflare dashboard)
+# [env.production.vars]
+# VITE_SUPABASE_URL = "https://xxxxx.supabase.co"
+# Note: Don't commit sensitive keys to git!

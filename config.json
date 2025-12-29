@@ -1,0 +1,126 @@
+
+{
+  "schemaVersion": "1.2.0",
+  "meta": {
+    "gameId": "pm-sim",
+    "configName": "multi-card-mode",
+    "notes": "Мультикарточный режим: несколько карточек одновременно, сложность через spawn interval"
+  },
+
+  "levels": {
+    "maxLevels": 30
+  },
+
+  "lives": {
+    "startLives": 3,
+    "maxLives": 3
+  },
+
+  "multiCard": {
+    "enabled": true,
+    "maxSimultaneousCards": 5
+  },
+
+  "departments": {
+    "startActive": 4,
+    "maxActiveFromDepartmentsJson": true,
+    "fallbackMaxActive": 12,
+
+    "growth": {
+      "mode": "linearStep",
+      "addCount": 1,
+      "everyLevels": 2,
+      "capToMax": true
+    }
+  },
+
+  "timers": {
+    "regular": {
+      "baseSeconds": 25,
+      "perLevelScaling": {
+        "mode": "constant",
+        "keepConstant": true
+      }
+    },
+
+    "priorityTimeMultipliers": {
+      "regular": 1.0,
+      "serious": 0.85,
+      "critical": 0.70
+    }
+  },
+
+  "spawnInterval": {
+    "baseSeconds": 8,
+    "perLevelScaling": {
+      "mode": "exponential",
+      "multiplierEachLevel": 0.92,
+      "minSeconds": 2
+    }
+  },
+
+  "scoring": {
+    "basePoints": 100,
+
+    "priorityScoreMultipliers": {
+      "regular": 1.0,
+      "serious": 1.35,
+      "critical": 1.90
+    },
+
+    "timeBonus": {
+      "enabled": true,
+      "mode": "linear",
+      "maxBonusPoints": 60,
+      "bonusIfFinishedInFirstPercent": 0.25,
+      "bonusFallsToZeroAtPercent": 1.0
+    },
+
+    "streak": {
+      "enabled": true,
+      "maxMultiplier": 1.5,
+      "gainPerSuccess": 0.05,
+      "resetOnFail": true
+    }
+  },
+
+  "taskSpawn": {
+    "priorityChances": {
+      "mode": "curves",
+
+      "curves": {
+        "serious": {
+          "type": "easeIn",
+          "startAtLevel": 1,
+          "endAtLevel": 30,
+          "startValue": 0.10,
+          "endValue": 0.31,
+          "exponent": 1.6
+        },
+        "critical": {
+          "type": "easeIn",
+          "startAtLevel": 1,
+          "endAtLevel": 30,
+          "startValue": 0.02,
+          "endValue": 0.27,
+          "exponent": 1.9
+        }
+      },
+
+      "derived": {
+        "regular": "1 - serious - critical"
+      },
+
+      "constraints": {
+        "clampEachToRange": [0.0, 1.0],
+        "ensureSumToOne": true,
+        "ifRegularNegative": "renormalizeSeriousCritical"
+      }
+    }
+  },
+
+  "validation": {
+    "minSecondsFloor": 1,
+    "clampDepartmentsActive": true
+  }
+}

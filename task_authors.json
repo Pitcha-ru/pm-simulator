@@ -1,0 +1,14 @@
+
+{
+  "schemaVersion": "1.0.0",
+  "meta": {
+    "description": "Список сотрудников, чьи аватары и комментарии появляются вместе с задачами"
+  },
+  "author": [
+    { "id": "aut_01", "name": "Анна", "avatar": "avatar_anna.png" },
+    { "id": "aut_02", "name": "Дмитрий", "avatar": "avatar_dmitry.png" },
+    { "id": "aut_03", "name": "Мария", "avatar": "avatar_maria.png" },
+    { "id": "aut_04", "name": "Игорь", "avatar": "avatar_igor.png" },
+    { "id": "aut_05", "name": "Екатерина", "avatar": "avatar_ekaterina.png" }
+  ]
+}
