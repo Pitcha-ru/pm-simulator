@@ -1,35 +1,83 @@
 /**
  * Leaderboard Module
- * Manages high scores using localStorage
+ * Manages high scores using Supabase Database (global leaderboard)
  */
 
+// Supabase configuration
+const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
+const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || '';
+const USE_SUPABASE = SUPABASE_URL && SUPABASE_ANON_KEY;
+
 const STORAGE_KEY = 'pm-simulator-leaderboard';
-const MAX_ENTRIES = 100; // Store more, show top 5
+const MAX_ENTRIES = 100;
 
 export class Leaderboard {
     constructor() {
-        this.scores = this.loadScores();
+        this.scores = [];
+        this.loaded = false;
     }
     
     /**
-     * Load scores from localStorage
+     * Load scores from Supabase or localStorage fallback
      */
-    loadScores() {
+    async loadScores() {
+        if (USE_SUPABASE) {
+            try {
+                // Загружаем топ-100 из Supabase
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=${MAX_ENTRIES}`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        }
+                    }
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load leaderboard: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                this.scores = data.map(row => ({
+                    playerName: row.player_name,
+                    score: row.score,
+                    level: row.level,
+                    tasksCompleted: row.tasks_completed,
+                    timestamp: new Date(row.created_at).getTime(),
+                    date: new Date(row.created_at).toLocaleDateString('ru-RU')
+                }));
+                this.loaded = true;
+                return this.scores;
+            } catch (error) {
+                console.error('Failed to load from Supabase, using localStorage:', error);
+                return this.loadFromLocalStorage();
+            }
+        } else {
+            return this.loadFromLocalStorage();
+        }
+    }
+    
+    /**
+     * Load scores from localStorage (fallback)
+     */
+    loadFromLocalStorage() {
         try {
             const data = localStorage.getItem(STORAGE_KEY);
             if (data) {
-                return JSON.parse(data);
+                this.scores = JSON.parse(data);
             }
         } catch (error) {
             console.error('Failed to load leaderboard:', error);
         }
-        return [];
+        this.loaded = true;
+        return this.scores;
     }
     
     /**
-     * Save scores to localStorage
+     * Save scores to localStorage (fallback)
      */
-    saveScores() {
+    saveToLocalStorage() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.scores));
         } catch (error) {
@@ -38,11 +86,61 @@ export class Leaderboard {
     }
     
     /**
-     * Add a new score (keeps only best score per player)
+     * Add a new score to Supabase
      */
-    addScore(playerName, score, level, tasksCompleted) {
-        // Нормализуем имя игрока
+    async addScore(playerName, score, level, tasksCompleted) {
         const name = (playerName || 'Аноним').trim();
+        
+        if (USE_SUPABASE) {
+            try {
+                // Добавляем в Supabase
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/leaderboard`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({
+                            player_name: name,
+                            score: score,
+                            level: level,
+                            tasks_completed: tasksCompleted
+                        })
+                    }
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to save score: ${response.statusText}`);
+                }
+                
+                // Перезагружаем лидерборд
+                await this.loadScores();
+                
+                return {
+                    playerName: name,
+                    score,
+                    level,
+                    tasksCompleted,
+                    timestamp: Date.now(),
+                    date: new Date().toLocaleDateString('ru-RU')
+                };
+            } catch (error) {
+                console.error('Failed to save to Supabase, using localStorage:', error);
+                return this.addScoreLocal(name, score, level, tasksCompleted);
+            }
+        } else {
+            return this.addScoreLocal(name, score, level, tasksCompleted);
+        }
+    }
+    
+    /**
+     * Add score locally (fallback)
+     */
+    addScoreLocal(name, score, level, tasksCompleted) {
         const normalizedName = name.toLowerCase();
         
         const entry = {
@@ -54,30 +152,23 @@ export class Leaderboard {
             date: new Date().toLocaleDateString('ru-RU')
         };
         
-        // Find existing entry for this player (case-insensitive)
+        // Find existing entry for this player
         const existingIndex = this.scores.findIndex(s => 
             s.playerName.toLowerCase().trim() === normalizedName
         );
         
         if (existingIndex !== -1) {
-            // Player exists - ВСЕГДА обновляем его запись новым результатом
-            // Удаляем старую запись
             this.scores.splice(existingIndex, 1);
         }
         
-        // Добавляем новую запись (или обновленную)
         this.scores.push(entry);
-        
-        // Sort by score (descending)
         this.scores.sort((a, b) => b.score - a.score);
         
-        // Keep only top MAX_ENTRIES
         if (this.scores.length > MAX_ENTRIES) {
             this.scores = this.scores.slice(0, MAX_ENTRIES);
         }
         
-        this.saveScores();
-        
+        this.saveToLocalStorage();
         return entry;
     }
     
@@ -115,11 +206,11 @@ export class Leaderboard {
     }
     
     /**
-     * Clear all scores
+     * Clear all scores (admin only, use with caution!)
      */
     clearScores() {
         this.scores = [];
-        this.saveScores();
+        this.saveToLocalStorage();
     }
 }
 

@@ -45,8 +45,8 @@ class PMSimulator {
             // Setup base UI
             this.setupBaseUI();
             
-            // Show start screen
-            this.showStartScreen();
+            // Show start screen (load leaderboard)
+            await this.showStartScreen();
             
         } catch (error) {
             console.error('Failed to initialize game:', error);
@@ -57,7 +57,10 @@ class PMSimulator {
     /**
      * Show start screen with leaderboard
      */
-    showStartScreen() {
+    async showStartScreen() {
+        // Load leaderboard from Supabase
+        await this.leaderboard.loadScores();
+        
         // Render leaderboard on start screen
         const topScores = this.leaderboard.getTopScores(5);
         this.uiManager.renderStartLeaderboard(topScores);
@@ -417,7 +420,7 @@ class PMSimulator {
     /**
      * Handle game over (no more lives)
      */
-    onGameOver() {
+    async onGameOver() {
         // Stop all intervals
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
@@ -433,8 +436,8 @@ class PMSimulator {
             this.dragDropManager.cancelDrag();
         }
         
-        // Save score to leaderboard
-        this.leaderboard.addScore(
+        // Save score to leaderboard (async)
+        await this.leaderboard.addScore(
             this.playerName,
             this.gameState.score,
             this.gameState.level,
@@ -460,7 +463,7 @@ class PMSimulator {
     /**
      * Handle game completion (max level reached)
      */
-    onGameComplete() {
+    async onGameComplete() {
         // Stop all intervals
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
@@ -477,8 +480,8 @@ class PMSimulator {
             'success'
         );
         
-        // Save score to leaderboard
-        this.leaderboard.addScore(
+        // Save score to leaderboard (async)
+        await this.leaderboard.addScore(
             this.playerName,
             this.gameState.score,
             this.gameState.level,
@@ -512,3 +515,7 @@ if (document.readyState === 'loading') {
 } else {
     new PMSimulator();
 }
+npm install -g supabase
+supabase login
+./upload-to-supabase.sh
+
