@@ -18,7 +18,7 @@
 
   "multiCard": {
     "enabled": true,
-    "maxSimultaneousCards": 5
+    "maxSimultaneousCards": 8
   },
 
   "departments": {
@@ -29,7 +29,7 @@
     "growth": {
       "mode": "linearStep",
       "addCount": 1,
-      "everyLevels": 2,
+      "everyLevels": 1,
       "capToMax": true
     }
   },

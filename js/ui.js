@@ -40,6 +40,7 @@ export class UIManager {
             
             // Feedback
             feedbackMessage: document.getElementById('feedback-message'),
+            scoreFeedback: document.getElementById('score-feedback'),
             
             // Game Over
             finalScore: document.getElementById('final-score'),
@@ -306,14 +307,27 @@ export class UIManager {
      * Show feedback message
      */
     showFeedback(message, type = 'success') {
-        this.elements.feedbackMessage.textContent = message;
-        this.elements.feedbackMessage.className = `feedback-message ${type}`;
-        this.elements.feedbackMessage.classList.remove('hidden');
-        
-        // Auto-hide after delay
-        setTimeout(() => {
-            this.elements.feedbackMessage.classList.add('hidden');
-        }, 1500);
+        // Если это баллы (+XXX очков!), показываем в header
+        if (message.includes('очков') && message.startsWith('+')) {
+            this.elements.scoreFeedback.textContent = message;
+            this.elements.scoreFeedback.className = `score-feedback ${type}`;
+            this.elements.scoreFeedback.classList.remove('hidden');
+            
+            // Auto-hide after animation
+            setTimeout(() => {
+                this.elements.scoreFeedback.classList.add('hidden');
+            }, 1500);
+        } else {
+            // Остальные сообщения показываем по центру
+            this.elements.feedbackMessage.textContent = message;
+            this.elements.feedbackMessage.className = `feedback-message ${type}`;
+            this.elements.feedbackMessage.classList.remove('hidden');
+            
+            // Auto-hide after delay
+            setTimeout(() => {
+                this.elements.feedbackMessage.classList.add('hidden');
+            }, 1500);
+        }
     }
     
     /**
