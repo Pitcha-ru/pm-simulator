@@ -127,6 +127,8 @@ export class GameState {
             title: taskTitle,
             priority: priority,
             priorityIcon: priorityData.iconURL,
+            backgroundColor: priorityData.backgroundColor,
+            textColor: priorityData.textColor,
             departmentId: department.id,
             departmentName: department.name,
             author: {

@@ -211,6 +211,14 @@ export class UIManager {
         card.className = 'task-card';
         card.dataset.taskId = task.id;
         
+        // Apply priority colors if available
+        if (task.backgroundColor) {
+            card.style.backgroundColor = task.backgroundColor;
+        }
+        if (task.textColor) {
+            card.style.color = task.textColor;
+        }
+        
         card.innerHTML = `
             <div class="task-priority-icon">
                 <img src="${task.priorityIcon}" alt="${task.priority}">

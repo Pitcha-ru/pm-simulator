@@ -18,11 +18,11 @@
 
   "multiCard": {
     "enabled": true,
-    "maxSimultaneousCards": 8
+    "maxSimultaneousCards": 4
   },
 
   "departments": {
-    "startActive": 4,
+    "startActive": 2,
     "maxActiveFromDepartmentsJson": true,
     "fallbackMaxActive": 12,
 
@@ -36,7 +36,7 @@
 
   "timers": {
     "regular": {
-      "baseSeconds": 25,
+      "baseSeconds": 30,
       "perLevelScaling": {
         "mode": "constant",
         "keepConstant": true
@@ -51,10 +51,10 @@
   },
 
   "spawnInterval": {
-    "baseSeconds": 8,
+    "baseSeconds": 10,
     "perLevelScaling": {
       "mode": "exponential",
-      "multiplierEachLevel": 0.92,
+      "multiplierEachLevel": 0.95,
       "minSeconds": 2
     }
   },
