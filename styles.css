@@ -866,7 +866,75 @@ body {
    Responsive Design
    ============================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 768px) and (orientation: portrait) {
+    /* Reorder layout for mobile portrait */
+    .game-container {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .top-header {
+        flex-direction: column;
+        height: auto;
+        padding: var(--spacing-sm);
+        gap: var(--spacing-sm);
+        order: 1;
+    }
+    
+    .departments-dock {
+        order: 2;
+        padding: var(--spacing-sm);
+        border-bottom: 2px solid var(--color-border);
+        border-top: 1px solid var(--color-border);
+    }
+    
+    .board-area {
+        order: 3;
+        flex: 1;
+        padding: var(--spacing-md);
+    }
+    
+    .author-panel {
+        width: 100%;
+    }
+    
+    .scoreboard {
+        width: 100%;
+        justify-content: space-around;
+        gap: var(--spacing-sm);
+    }
+    
+    .score-item {
+        align-items: center;
+    }
+    
+    .task-card {
+        width: 90%;
+        max-width: 380px;
+    }
+    
+    .departments-container {
+        justify-content: flex-start;
+        gap: var(--spacing-xs);
+    }
+    
+    .department-block {
+        min-width: 60px;
+        width: calc(25% - 6px); /* 4 departments per row with gaps */
+        padding: var(--spacing-xs);
+    }
+    
+    .department-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .department-name {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
     .top-header {
         flex-direction: column;
         height: auto;
@@ -902,7 +970,35 @@ body {
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 480px) and (orientation: portrait) {
+    .task-card {
+        width: 95%;
+        padding: var(--spacing-md);
+        min-height: 160px;
+    }
+    
+    .task-title {
+        font-size: 16px;
+    }
+    
+    .department-block {
+        min-width: 55px;
+        width: calc(25% - 4px);
+        padding: 6px;
+    }
+    
+    .department-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .department-name {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
     .task-card {
         width: 95%;
         padding: var(--spacing-md);
