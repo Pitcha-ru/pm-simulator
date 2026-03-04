@@ -10,6 +10,12 @@ import { DragDropManager } from './dragDrop.js';
 import { Leaderboard } from './leaderboard.js';
 import { calculateScore, updateStreakMultiplier, shouldLevelUp } from './gameLogic.js';
 
+// Supabase config for onboard_user_progress (separate project)
+const ONBOARD_SUPABASE_URL =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ONBOARD_SUPABASE_URL) || '';
+const ONBOARD_SUPABASE_ANON_KEY =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ONBOARD_SUPABASE_ANON_KEY) || '';
+
 class PMSimulator {
     constructor() {
         this.gameData = null;
@@ -24,6 +30,7 @@ class PMSimulator {
         this.isProcessingTimeout = false;  // Флаг обработки timeout
         
         this.playerName = '';
+        this.chatIdFromUrl = null;
         
         this.init();
     }
@@ -41,17 +48,111 @@ class PMSimulator {
             
             // Preload images
             await preloadImages(this.gameData);
-            
+
             // Setup base UI
             this.setupBaseUI();
-            
-            // Show start screen (load leaderboard)
-            await this.showStartScreen();
-            
+
+            // Try to auto-start game using chat_id from URL / onboard_user_progress
+            const didAutoStart = await this.tryAutoStartFromOnboardChatId();
+
+            if (!didAutoStart) {
+                // Show start screen (load leaderboard)
+                await this.showStartScreen();
+            }
         } catch (error) {
             console.error('Failed to initialize game:', error);
             this.uiManager.showError(error.message);
         }
+    }
+
+    /**
+     * Extract chat_id from URL hash (e.g. .../#12345)
+     */
+    getChatIdFromURL() {
+        if (typeof window === 'undefined') return null;
+        const hash = window.location.hash || '';
+        if (!hash || hash.length <= 1) return null;
+        const raw = hash.substring(1).trim();
+        return raw || null;
+    }
+
+    /**
+     * Load chat_id from onboard_user_progress table in separate Supabase project
+     * Returns string value for player name or null
+     */
+    async fetchOnboardChatId(chatId) {
+        if (!ONBOARD_SUPABASE_URL || !ONBOARD_SUPABASE_ANON_KEY) {
+            return null;
+        }
+
+        try {
+            const url = `${ONBOARD_SUPABASE_URL}/rest/v1/onboard_user_progress?chat_id=eq.${encodeURIComponent(
+                chatId
+            )}&select=chat_id&limit=1`;
+
+            const response = await fetch(url, {
+                headers: {
+                    apikey: ONBOARD_SUPABASE_ANON_KEY,
+                    Authorization: `Bearer ${ONBOARD_SUPABASE_ANON_KEY}`,
+                    Accept: 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.warn('Failed to fetch onboard_user_progress:', response.status, response.statusText);
+                return null;
+            }
+
+            const data = await response.json();
+            if (!Array.isArray(data) || data.length === 0) {
+                return null;
+            }
+
+            const row = data[0];
+            if (!row || row.chat_id == null) {
+                return null;
+            }
+
+            return String(row.chat_id);
+        } catch (err) {
+            console.warn('Error while fetching onboard_user_progress:', err);
+            return null;
+        }
+    }
+
+    /**
+     * Try to auto-start game using chat_id from URL and onboard_user_progress
+     * Returns true if game was auto-started, false otherwise
+     */
+    async tryAutoStartFromOnboardChatId() {
+        const chatId = this.getChatIdFromURL();
+        if (!chatId) {
+            return false;
+        }
+
+        this.chatIdFromUrl = chatId;
+
+        const onboardChatId = await this.fetchOnboardChatId(chatId);
+        if (!onboardChatId) {
+            // No valid chat_id in table → start as usual (with name input)
+            return false;
+        }
+
+        // Use chat_id from table as player name
+        this.playerName = onboardChatId;
+
+        // Also put it into input field (in case UI вернётся к стартовому экрану)
+        if (this.uiManager?.elements?.playerNameInput) {
+            this.uiManager.elements.playerNameInput.value = this.playerName;
+        }
+
+        // Initialize and start game immediately, skipping name input step
+        this.gameState = new GameState(this.gameData);
+        this.setupGameUI();
+        this.uiManager.showGame();
+        this.startGame();
+
+        return true;
     }
     
     /**
