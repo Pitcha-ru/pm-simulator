@@ -72,7 +72,7 @@ class PMSimulator {
             // Setup base UI
             this.setupBaseUI();
 
-            // Try to auto-start game using chat_id from URL / onboard_user_progress
+            // Try to prefill player name from chat_id in URL / onboard_user_progress
             // #region agent log
             fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
                 method: 'POST',
@@ -84,39 +84,19 @@ class PMSimulator {
                     sessionId: '44a8e9',
                     runId: 'pre-fix',
                     hypothesisId: 'H2',
-                    location: 'main.js:init:beforeAutoStart',
-                    message: 'Before tryAutoStartFromOnboardChatId',
+                    location: 'main.js:init:beforePrefill',
+                    message: 'Before tryPrefillNameFromOnboardChatId',
                     data: {},
                     timestamp: Date.now()
                 })
             }).catch(() => {});
             // #endregion agent log
-
-            const didAutoStart = await this.tryAutoStartFromOnboardChatId();
-
-            // #region agent log
-            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Debug-Session-Id': '44a8e9'
-                },
-                body: JSON.stringify({
-                    sessionId: '44a8e9',
-                    runId: 'pre-fix',
-                    hypothesisId: 'H2',
-                    location: 'main.js:init:afterAutoStart',
-                    message: 'Result of tryAutoStartFromOnboardChatId',
-                    data: { didAutoStart },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-            // #endregion agent log
-
-            if (!didAutoStart) {
-                // Show start screen (load leaderboard)
-                await this.showStartScreen();
-            }
+            
+            // Try to prefill name field; always show start screen afterwards
+            await this.tryPrefillNameFromOnboardChatId();
+            
+            // Show start screen (load leaderboard)
+            await this.showStartScreen();
         } catch (error) {
             console.error('Failed to initialize game:', error);
             this.uiManager.showError(error.message);
@@ -155,8 +135,8 @@ class PMSimulator {
     }
 
     /**
-     * Load chat_id from onboard_user_progress table in separate Supabase project
-     * Returns string value for player name or null
+     * Load name from onboard_user_progress table in separate Supabase project
+     * Returns display name string (firstName lastName or fallback) or null
      */
     async fetchOnboardChatId(chatId) {
         if (!ONBOARD_SUPABASE_URL || !ONBOARD_SUPABASE_ANON_KEY) {
@@ -185,7 +165,7 @@ class PMSimulator {
         }
 
         try {
-            const selectParam = encodeURIComponent('chat_id,"firstName"');
+            const selectParam = encodeURIComponent('chat_id,"firstName","lastName"');
             const url = `${ONBOARD_SUPABASE_URL}/rest/v1/onboard_user_progress?chat_id=eq.${encodeURIComponent(
                 chatId
             )}&select=${selectParam}&order=updated_at.desc&limit=1`;
@@ -305,19 +285,25 @@ class PMSimulator {
                     message: 'Successfully fetched onboard user record',
                     data: {
                         chatIdFromTable: row.chat_id,
-                        firstName: row.firstName ?? null
+                        firstName: row.firstName ?? null,
+                        lastName: row.lastName ?? null
                     },
                     timestamp: Date.now()
                 })
             }).catch(() => {});
             // #endregion agent log
-
-            // Prefer firstName for display; fall back to chat_id if missing
+            
+            // Prefer "firstName lastName" for display; fall back to firstName, then chat_id
             const rawFirstName = row.firstName;
+            const rawLastName = row.lastName;
+            
             if (rawFirstName != null && String(rawFirstName).trim() !== '') {
-                return String(rawFirstName).trim();
+                const first = String(rawFirstName).trim();
+                const last = rawLastName != null ? String(rawLastName).trim() : '';
+                const full = last ? `${first} ${last}` : first;
+                return full;
             }
-
+            
             return String(row.chat_id);
         } catch (err) {
             console.warn('Error while fetching onboard_user_progress:', err);
@@ -345,10 +331,10 @@ class PMSimulator {
     }
 
     /**
-     * Try to auto-start game using chat_id from URL and onboard_user_progress
-     * Returns true if game was auto-started, false otherwise
+     * Try to prefill player name using chat_id from URL and onboard_user_progress.
+     * Returns true if name was prefilled, false otherwise.
      */
-    async tryAutoStartFromOnboardChatId() {
+    async tryPrefillNameFromOnboardChatId() {
         const chatId = this.getChatIdFromURL();
         if (!chatId) {
             // #region agent log
@@ -362,8 +348,8 @@ class PMSimulator {
                     sessionId: '44a8e9',
                     runId: 'pre-fix',
                     hypothesisId: 'H3',
-                    location: 'main.js:tryAutoStart:noChatId',
-                    message: 'No chatId in URL, skipping auto start',
+                    location: 'main.js:tryPrefill:noChatId',
+                    message: 'No chatId in URL, skipping prefill',
                     data: {},
                     timestamp: Date.now()
                 })
@@ -374,9 +360,9 @@ class PMSimulator {
 
         this.chatIdFromUrl = chatId;
 
-        const onboardChatId = await this.fetchOnboardChatId(chatId);
-        if (!onboardChatId) {
-            // No valid chat_id in table → start as usual (with name input)
+        const onboardName = await this.fetchOnboardChatId(chatId);
+        if (!onboardName) {
+            // No valid record in table → start as usual (with name input)
             // #region agent log
             fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
                 method: 'POST',
@@ -388,8 +374,8 @@ class PMSimulator {
                     sessionId: '44a8e9',
                     runId: 'pre-fix',
                     hypothesisId: 'H5',
-                    location: 'main.js:tryAutoStart:noOnboardChatId',
-                    message: 'fetchOnboardChatId returned null, falling back to normal flow',
+                    location: 'main.js:tryPrefill:noOnboardName',
+                    message: 'fetchOnboardChatId returned null, leaving name input empty',
                     data: { chatIdFromUrl: chatId },
                     timestamp: Date.now()
                 })
@@ -398,15 +384,11 @@ class PMSimulator {
             return false;
         }
 
-        // Use onboard value (firstName/chat_id) as player name
-        this.playerName = onboardChatId;
-
-        // Also put it into input field (in case UI вернётся к стартовому экрану)
+        // Put value into input field, but do NOT auto-start the game
         if (this.uiManager?.elements?.playerNameInput) {
-            this.uiManager.elements.playerNameInput.value = this.playerName;
+            this.uiManager.elements.playerNameInput.value = onboardName;
         }
 
-        // Initialize and start game immediately, skipping name input step
         // #region agent log
         fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
             method: 'POST',
@@ -418,23 +400,13 @@ class PMSimulator {
                 sessionId: '44a8e9',
                 runId: 'pre-fix',
                 hypothesisId: 'H6',
-                location: 'main.js:tryAutoStart:beforeStartGame',
-                message: 'Auto starting game with onboard chat_id',
-                data: { playerName: this.playerName },
+                location: 'main.js:tryPrefill:success',
+                message: 'Prefilled player name from onboard_user_progress',
+                data: { onboardName },
                 timestamp: Date.now()
             })
         }).catch(() => {});
         // #endregion agent log
-
-        this.gameState = new GameState(this.gameData);
-
-        // Start persistent leaderboard session (async, без ожидания)
-        this.startLeaderboardSession();
-
-        this.setupGameUI();
-        this.uiManager.showGame();
-        this.startGame();
-
         return true;
     }
     
