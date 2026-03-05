@@ -91,6 +91,7 @@ export class Leaderboard {
     async addScore(playerName, score, level, tasksCompleted) {
         const name = (playerName || 'Аноним').trim();
         
+        // Legacy method: creates a new leaderboard entry (used as fallback)
         if (USE_SUPABASE) {
             try {
                 // Добавляем в Supabase
@@ -134,6 +135,100 @@ export class Leaderboard {
             }
         } else {
             return this.addScoreLocal(name, score, level, tasksCompleted);
+        }
+    }
+
+    /**
+     * Create a persistent session entry when game starts.
+     * Returns Supabase row (with id) when available.
+     */
+    async createSession(playerName, score, level, tasksCompleted) {
+        const name = (playerName || 'Аноним').trim();
+
+        if (USE_SUPABASE) {
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/leaderboard`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({
+                            player_name: name,
+                            score: score,
+                            level: level,
+                            tasks_completed: tasksCompleted
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Failed to create session: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+
+                // Перезагружаем лидерборд для актуальных данных
+                await this.loadScores();
+
+                return row;
+            } catch (error) {
+                console.error('Failed to create session in Supabase, using localStorage:', error);
+                // Fallback: just update local leaderboard entry
+                this.addScoreLocal(name, score, level, tasksCompleted);
+                return null;
+            }
+        } else {
+            // Только локальное хранение
+            this.addScoreLocal(name, score, level, tasksCompleted);
+            return null;
+        }
+    }
+
+    /**
+     * Update existing session row by id with latest progress
+     */
+    async updateSession(sessionId, playerName, score, level, tasksCompleted) {
+        const name = (playerName || 'Аноним').trim();
+
+        if (USE_SUPABASE && sessionId != null) {
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/leaderboard?id=eq.${encodeURIComponent(sessionId)}`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            player_name: name,
+                            score: score,
+                            level: level,
+                            tasks_completed: tasksCompleted
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update session: ${response.statusText}`);
+                }
+
+                // Обновляем локальный список лидеров
+                await this.loadScores();
+            } catch (error) {
+                console.error('Failed to update session in Supabase, using localStorage:', error);
+                this.addScoreLocal(name, score, level, tasksCompleted);
+            }
+        } else {
+            // Нет Supabase или sessionId — просто обновляем локально
+            this.addScoreLocal(name, score, level, tasksCompleted);
         }
     }
     

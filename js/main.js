@@ -31,6 +31,7 @@ class PMSimulator {
         
         this.playerName = '';
         this.chatIdFromUrl = null;
+        this.leaderboardSessionId = null;
         
         this.init();
     }
@@ -397,7 +398,7 @@ class PMSimulator {
             return false;
         }
 
-        // Use chat_id from table as player name
+        // Use onboard value (firstName/chat_id) as player name
         this.playerName = onboardChatId;
 
         // Also put it into input field (in case UI вернётся к стартовому экрану)
@@ -426,6 +427,10 @@ class PMSimulator {
         // #endregion agent log
 
         this.gameState = new GameState(this.gameData);
+
+        // Start persistent leaderboard session (async, без ожидания)
+        this.startLeaderboardSession();
+
         this.setupGameUI();
         this.uiManager.showGame();
         this.startGame();
@@ -458,6 +463,9 @@ class PMSimulator {
         
         // Initialize game state
         this.gameState = new GameState(this.gameData);
+
+        // Start persistent leaderboard session (async, без ожидания)
+        this.startLeaderboardSession();
         
         // Setup game UI
         this.setupGameUI();
@@ -467,6 +475,65 @@ class PMSimulator {
         
         // Start game
         this.startGame();
+    }
+
+    /**
+     * Create leaderboard session row when game starts
+     */
+    async startLeaderboardSession() {
+        if (this.leaderboardSessionId !== null) {
+            return;
+        }
+
+        try {
+            const row = await this.leaderboard.createSession(
+                this.playerName,
+                this.gameState?.score ?? 0,
+                this.gameState?.level ?? 1,
+                this.gameState?.totalTasksCompleted ?? 0
+            );
+
+            if (row && typeof row.id !== 'undefined' && row.id !== null) {
+                this.leaderboardSessionId = row.id;
+            }
+        } catch (error) {
+            console.warn('Failed to start leaderboard session:', error);
+        }
+    }
+
+    /**
+     * Save current progress to leaderboard after each player action
+     */
+    async saveProgress() {
+        try {
+            if (!this.gameState) return;
+
+            const score = this.gameState.score;
+            const level = this.gameState.level;
+            const tasksCompleted = this.gameState.totalTasksCompleted;
+
+            if (this.leaderboardSessionId !== null) {
+                await this.leaderboard.updateSession(
+                    this.leaderboardSessionId,
+                    this.playerName,
+                    score,
+                    level,
+                    tasksCompleted
+                );
+            } else {
+                const row = await this.leaderboard.createSession(
+                    this.playerName,
+                    score,
+                    level,
+                    tasksCompleted
+                );
+                if (row && typeof row.id !== 'undefined' && row.id !== null) {
+                    this.leaderboardSessionId = row.id;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to save progress to leaderboard:', error);
+        }
     }
     
     /**
@@ -675,6 +742,9 @@ class PMSimulator {
             }
         }, 400);
         
+        // Persist progress after successful action
+        this.saveProgress();
+        
         // Check for level up
         const shouldLevel = shouldLevelUp(
             this.gameState.tasksCompletedThisLevel,
@@ -714,6 +784,9 @@ class PMSimulator {
                 cardElement.classList.remove('fail');
             }
         }, 400);
+        
+        // Persist progress after failed action (стрик/состояние изменились)
+        this.saveProgress();
     }
     
     /**
@@ -753,6 +826,9 @@ class PMSimulator {
                 this.isProcessingTimeout = false;
             }
         }, 500);
+        
+        // Persist progress after timeout (жизни/статус изменились)
+        this.saveProgress();
         
         // Trigger game over if needed
         if (gameOver) {
@@ -815,13 +891,8 @@ class PMSimulator {
             this.dragDropManager.cancelDrag();
         }
         
-        // Save score to leaderboard (async)
-        await this.leaderboard.addScore(
-            this.playerName,
-            this.gameState.score,
-            this.gameState.level,
-            this.gameState.totalTasksCompleted
-        );
+        // Ensure latest progress is saved to leaderboard
+        await this.saveProgress();
         
         // Get player rank
         const rank = this.leaderboard.getPlayerRank(this.playerName);
@@ -859,13 +930,8 @@ class PMSimulator {
             'success'
         );
         
-        // Save score to leaderboard (async)
-        await this.leaderboard.addScore(
-            this.playerName,
-            this.gameState.score,
-            this.gameState.level,
-            this.gameState.totalTasksCompleted
-        );
+        // Ensure latest progress is saved to leaderboard
+        await this.saveProgress();
         
         // Get player rank
         const rank = this.leaderboard.getPlayerRank(this.playerName);
