@@ -533,51 +533,14 @@ class PMSimulator {
             const level = this.gameState.level;
             const tasksCompleted = this.gameState.totalTasksCompleted;
 
-            // #region agent log
-            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Debug-Session-Id': '44a8e9'
-                },
-                body: JSON.stringify({
-                    sessionId: '44a8e9',
-                    runId: 'pre-fix',
-                    hypothesisId: 'P2',
-                    location: 'main.js:saveProgress:beforePersist',
-                    message: 'Saving progress to leaderboard',
-                    data: {
-                        hasSessionId: this.leaderboardSessionId !== null,
-                        sessionId: this.leaderboardSessionId,
-                        playerName: this.playerName,
-                        score,
-                        level,
-                        tasksCompleted
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-            // #endregion agent log
-
-            if (this.leaderboardSessionId !== null) {
-                await this.leaderboard.updateSession(
-                    this.leaderboardSessionId,
-                    this.playerName,
-                    score,
-                    level,
-                    tasksCompleted
-                );
-            } else {
-                const row = await this.leaderboard.createSession(
-                    this.playerName,
-                    score,
-                    level,
-                    tasksCompleted
-                );
-                if (row && typeof row.id !== 'undefined' && row.id !== null) {
-                    this.leaderboardSessionId = row.id;
-                }
-            }
+            // Просто создаём новую запись-снимок прогресса в leaderboard на каждом сохранении.
+            // Это надёжнее, чем PATCH существующей строки, с учётом возможных RLS-политик.
+            await this.leaderboard.addScore(
+                this.playerName,
+                score,
+                level,
+                tasksCompleted
+            );
         } catch (error) {
             console.warn('Failed to save progress to leaderboard:', error);
         }
