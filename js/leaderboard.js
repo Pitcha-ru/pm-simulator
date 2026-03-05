@@ -147,6 +147,25 @@ export class Leaderboard {
 
         if (USE_SUPABASE) {
             try {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB1',
+                        location: 'leaderboard.js:createSession:beforeFetch',
+                        message: 'Creating leaderboard session in Supabase',
+                        data: { name, score, level, tasksCompleted },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
+
                 const response = await fetch(
                     `${SUPABASE_URL}/rest/v1/leaderboard`,
                     {
@@ -167,11 +186,49 @@ export class Leaderboard {
                 );
 
                 if (!response.ok) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Debug-Session-Id': '44a8e9'
+                        },
+                        body: JSON.stringify({
+                            sessionId: '44a8e9',
+                            runId: 'pre-fix',
+                            hypothesisId: 'LB1',
+                            location: 'leaderboard.js:createSession:responseNotOk',
+                            message: 'Failed to create session in Supabase',
+                            data: { status: response.status, statusText: response.statusText },
+                            timestamp: Date.now()
+                        })
+                    }).catch(() => {});
+                    // #endregion agent log
+
                     throw new Error(`Failed to create session: ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB1',
+                        location: 'leaderboard.js:createSession:success',
+                        message: 'Created leaderboard session row',
+                        data: { row },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
 
                 // Перезагружаем лидерборд для актуальных данных
                 await this.loadScores();
@@ -179,6 +236,24 @@ export class Leaderboard {
                 return row;
             } catch (error) {
                 console.error('Failed to create session in Supabase, using localStorage:', error);
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB1',
+                        location: 'leaderboard.js:createSession:catch',
+                        message: 'Exception while creating session',
+                        data: { error: String(error && error.message ? error.message : error) },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
                 // Fallback: just update local leaderboard entry
                 this.addScoreLocal(name, score, level, tasksCompleted);
                 return null;
@@ -198,6 +273,25 @@ export class Leaderboard {
 
         if (USE_SUPABASE && sessionId != null) {
             try {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB2',
+                        location: 'leaderboard.js:updateSession:beforeFetch',
+                        message: 'Updating leaderboard session in Supabase',
+                        data: { sessionId, name, score, level, tasksCompleted },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
+
                 const response = await fetch(
                     `${SUPABASE_URL}/rest/v1/leaderboard?id=eq.${encodeURIComponent(sessionId)}`,
                     {
@@ -217,13 +311,70 @@ export class Leaderboard {
                 );
 
                 if (!response.ok) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Debug-Session-Id': '44a8e9'
+                        },
+                        body: JSON.stringify({
+                            sessionId: '44a8e9',
+                            runId: 'pre-fix',
+                            hypothesisId: 'LB2',
+                            location: 'leaderboard.js:updateSession:responseNotOk',
+                            message: 'Failed to update session in Supabase',
+                            data: { status: response.status, statusText: response.statusText },
+                            timestamp: Date.now()
+                        })
+                    }).catch(() => {});
+                    // #endregion agent log
+
                     throw new Error(`Failed to update session: ${response.statusText}`);
                 }
+
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB2',
+                        location: 'leaderboard.js:updateSession:success',
+                        message: 'Updated leaderboard session row',
+                        data: { sessionId },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
 
                 // Обновляем локальный список лидеров
                 await this.loadScores();
             } catch (error) {
                 console.error('Failed to update session in Supabase, using localStorage:', error);
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'LB2',
+                        location: 'leaderboard.js:updateSession:catch',
+                        message: 'Exception while updating session',
+                        data: { error: String(error && error.message ? error.message : error) },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
+
                 this.addScoreLocal(name, score, level, tasksCompleted);
             }
         } else {

@@ -465,6 +465,27 @@ class PMSimulator {
         this.gameState = new GameState(this.gameData);
 
         // Start persistent leaderboard session (async, без ожидания)
+        // #region agent log
+        fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Debug-Session-Id': '44a8e9'
+            },
+            body: JSON.stringify({
+                sessionId: '44a8e9',
+                runId: 'pre-fix',
+                hypothesisId: 'P1',
+                location: 'main.js:startGameWithPlayer:beforeStartSession',
+                message: 'Starting leaderboard session from startGameWithPlayer',
+                data: {
+                    playerName: this.playerName
+                },
+                timestamp: Date.now()
+            })
+        }).catch(() => {});
+        // #endregion agent log
+
         this.startLeaderboardSession();
         
         // Setup game UI
@@ -511,6 +532,32 @@ class PMSimulator {
             const score = this.gameState.score;
             const level = this.gameState.level;
             const tasksCompleted = this.gameState.totalTasksCompleted;
+
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'P2',
+                    location: 'main.js:saveProgress:beforePersist',
+                    message: 'Saving progress to leaderboard',
+                    data: {
+                        hasSessionId: this.leaderboardSessionId !== null,
+                        sessionId: this.leaderboardSessionId,
+                        playerName: this.playerName,
+                        score,
+                        level,
+                        tasksCompleted
+                    },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
 
             if (this.leaderboardSessionId !== null) {
                 await this.leaderboard.updateSession(
