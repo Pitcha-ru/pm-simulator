@@ -43,6 +43,25 @@ class PMSimulator {
             // Show loading screen
             this.uiManager.showLoading();
             
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H1',
+                    location: 'main.js:init:beforeLoad',
+                    message: 'Init called before loading game data',
+                    data: {},
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
+
             // Load game data
             this.gameData = await loadGameData();
             
@@ -53,7 +72,45 @@ class PMSimulator {
             this.setupBaseUI();
 
             // Try to auto-start game using chat_id from URL / onboard_user_progress
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H2',
+                    location: 'main.js:init:beforeAutoStart',
+                    message: 'Before tryAutoStartFromOnboardChatId',
+                    data: {},
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
+
             const didAutoStart = await this.tryAutoStartFromOnboardChatId();
+
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H2',
+                    location: 'main.js:init:afterAutoStart',
+                    message: 'Result of tryAutoStartFromOnboardChatId',
+                    data: { didAutoStart },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
 
             if (!didAutoStart) {
                 // Show start screen (load leaderboard)
@@ -73,6 +130,26 @@ class PMSimulator {
         const hash = window.location.hash || '';
         if (!hash || hash.length <= 1) return null;
         const raw = hash.substring(1).trim();
+
+        // #region agent log
+        fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Debug-Session-Id': '44a8e9'
+            },
+            body: JSON.stringify({
+                sessionId: '44a8e9',
+                runId: 'pre-fix',
+                hypothesisId: 'H3',
+                location: 'main.js:getChatIdFromURL',
+                message: 'Parsed chatId from URL hash',
+                data: { hash, raw },
+                timestamp: Date.now()
+            })
+        }).catch(() => {});
+        // #endregion agent log
+
         return raw || null;
     }
 
@@ -82,13 +159,54 @@ class PMSimulator {
      */
     async fetchOnboardChatId(chatId) {
         if (!ONBOARD_SUPABASE_URL || !ONBOARD_SUPABASE_ANON_KEY) {
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H4',
+                    location: 'main.js:fetchOnboardChatId:noEnv',
+                    message: 'ONBOARD Supabase env vars are missing',
+                    data: {
+                        hasUrl: !!ONBOARD_SUPABASE_URL,
+                        hasKey: !!ONBOARD_SUPABASE_ANON_KEY
+                    },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
             return null;
         }
 
         try {
+            const selectParam = encodeURIComponent('chat_id,"firstName"');
             const url = `${ONBOARD_SUPABASE_URL}/rest/v1/onboard_user_progress?chat_id=eq.${encodeURIComponent(
                 chatId
-            )}&select=chat_id&limit=1`;
+            )}&select=${selectParam}&order=updated_at.desc&limit=1`;
+
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H4',
+                    location: 'main.js:fetchOnboardChatId:beforeFetch',
+                    message: 'About to fetch onboard_user_progress',
+                    data: { url, chatId },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
 
             const response = await fetch(url, {
                 headers: {
@@ -100,22 +218,127 @@ class PMSimulator {
 
             if (!response.ok) {
                 console.warn('Failed to fetch onboard_user_progress:', response.status, response.statusText);
+
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'H4',
+                        location: 'main.js:fetchOnboardChatId:responseNotOk',
+                        message: 'onboard_user_progress fetch failed',
+                        data: {
+                            status: response.status,
+                            statusText: response.statusText
+                        },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
                 return null;
             }
 
             const data = await response.json();
             if (!Array.isArray(data) || data.length === 0) {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'H5',
+                        location: 'main.js:fetchOnboardChatId:emptyData',
+                        message: 'No rows returned from onboard_user_progress',
+                        data: { length: Array.isArray(data) ? data.length : null },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
                 return null;
             }
 
             const row = data[0];
             if (!row || row.chat_id == null) {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'H5',
+                        location: 'main.js:fetchOnboardChatId:nullChatId',
+                        message: 'Row found but chat_id is null/undefined',
+                        data: { row },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
                 return null;
+            }
+
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H5',
+                    location: 'main.js:fetchOnboardChatId:success',
+                    message: 'Successfully fetched onboard user record',
+                    data: {
+                        chatIdFromTable: row.chat_id,
+                        firstName: row.firstName ?? null
+                    },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
+
+            // Prefer firstName for display; fall back to chat_id if missing
+            const rawFirstName = row.firstName;
+            if (rawFirstName != null && String(rawFirstName).trim() !== '') {
+                return String(rawFirstName).trim();
             }
 
             return String(row.chat_id);
         } catch (err) {
             console.warn('Error while fetching onboard_user_progress:', err);
+
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H4',
+                    location: 'main.js:fetchOnboardChatId:catch',
+                    message: 'Exception while fetching onboard_user_progress',
+                    data: { error: String(err && err.message ? err.message : err) },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
             return null;
         }
     }
@@ -127,6 +350,24 @@ class PMSimulator {
     async tryAutoStartFromOnboardChatId() {
         const chatId = this.getChatIdFromURL();
         if (!chatId) {
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H3',
+                    location: 'main.js:tryAutoStart:noChatId',
+                    message: 'No chatId in URL, skipping auto start',
+                    data: {},
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
             return false;
         }
 
@@ -135,6 +376,24 @@ class PMSimulator {
         const onboardChatId = await this.fetchOnboardChatId(chatId);
         if (!onboardChatId) {
             // No valid chat_id in table → start as usual (with name input)
+            // #region agent log
+            fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '44a8e9'
+                },
+                body: JSON.stringify({
+                    sessionId: '44a8e9',
+                    runId: 'pre-fix',
+                    hypothesisId: 'H5',
+                    location: 'main.js:tryAutoStart:noOnboardChatId',
+                    message: 'fetchOnboardChatId returned null, falling back to normal flow',
+                    data: { chatIdFromUrl: chatId },
+                    timestamp: Date.now()
+                })
+            }).catch(() => {});
+            // #endregion agent log
             return false;
         }
 
@@ -147,6 +406,25 @@ class PMSimulator {
         }
 
         // Initialize and start game immediately, skipping name input step
+        // #region agent log
+        fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Debug-Session-Id': '44a8e9'
+            },
+            body: JSON.stringify({
+                sessionId: '44a8e9',
+                runId: 'pre-fix',
+                hypothesisId: 'H6',
+                location: 'main.js:tryAutoStart:beforeStartGame',
+                message: 'Auto starting game with onboard chat_id',
+                data: { playerName: this.playerName },
+                timestamp: Date.now()
+            })
+        }).catch(() => {});
+        // #endregion agent log
+
         this.gameState = new GameState(this.gameData);
         this.setupGameUI();
         this.uiManager.showGame();
