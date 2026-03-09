@@ -108,30 +108,66 @@ class PMSimulator {
      */
     getChatIdFromURL() {
         if (typeof window === 'undefined') return null;
+        
+        // 1) Обычный вариант: фрагмент URL (.../#12345)
         const hash = window.location.hash || '';
-        if (!hash || hash.length <= 1) return null;
-        const raw = hash.substring(1).trim();
+        if (hash && hash.length > 1) {
+            const rawFromHash = hash.substring(1).trim();
+            if (rawFromHash) {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'H3',
+                        location: 'main.js:getChatIdFromURL:fromHash',
+                        message: 'Parsed chatId from URL hash',
+                        data: { hash, rawFromHash },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
+                
+                return rawFromHash;
+            }
+        }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Debug-Session-Id': '44a8e9'
-            },
-            body: JSON.stringify({
-                sessionId: '44a8e9',
-                runId: 'pre-fix',
-                hypothesisId: 'H3',
-                location: 'main.js:getChatIdFromURL',
-                message: 'Parsed chatId from URL hash',
-                data: { hash, raw },
-                timestamp: Date.now()
-            })
-        }).catch(() => {});
-        // #endregion agent log
+        // 2) Вариант с URL-encoded #: .../%2312345 (\"%23\" вместо \"#\")
+        const href = window.location.href || '';
+        const encodedMatch = href.match(/%23([^/?#]+)/);
+        if (encodedMatch && encodedMatch[1]) {
+            const rawFromEncoded = encodedMatch[1].trim();
 
-        return raw || null;
+            if (rawFromEncoded) {
+                // #region agent log
+                fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Debug-Session-Id': '44a8e9'
+                    },
+                    body: JSON.stringify({
+                        sessionId: '44a8e9',
+                        runId: 'pre-fix',
+                        hypothesisId: 'H3',
+                        location: 'main.js:getChatIdFromURL:fromEncoded',
+                        message: 'Parsed chatId from URL encoded %23',
+                        data: { href, rawFromEncoded },
+                        timestamp: Date.now()
+                    })
+                }).catch(() => {});
+                // #endregion agent log
+
+                return rawFromEncoded;
+            }
+        }
+
+        return null;
     }
 
     /**
