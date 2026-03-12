@@ -31,7 +31,11 @@ class PMSimulator {
         
         this.playerName = '';
         this.chatIdFromUrl = null;
-        this.leaderboardSessionId = null;
+        this.leaderboardSessionId = null; // больше не используем для leaderboard, оставлено для обратной совместимости
+
+        this.lastActionTimestamp = null;
+        this.sessionSavedToLeaderboard = false;
+        this.idleCheckInterval = null;
         
         this.init();
     }
@@ -472,29 +476,10 @@ class PMSimulator {
         // Initialize game state
         this.gameState = new GameState(this.gameData);
 
-        // Start persistent leaderboard session (async, без ожидания)
-        // #region agent log
-        fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Debug-Session-Id': '44a8e9'
-            },
-            body: JSON.stringify({
-                sessionId: '44a8e9',
-                runId: 'pre-fix',
-                hypothesisId: 'P1',
-                location: 'main.js:startGameWithPlayer:beforeStartSession',
-                message: 'Starting leaderboard session from startGameWithPlayer',
-                data: {
-                    playerName: this.playerName
-                },
-                timestamp: Date.now()
-            })
-        }).catch(() => {});
-        // #endregion agent log
-
-        this.startLeaderboardSession();
+        // Initialize activity tracking for this session
+        this.lastActionTimestamp = Date.now();
+        this.sessionSavedToLeaderboard = false;
+        this.startIdleCheckLoop();
         
         // Setup game UI
         this.setupGameUI();
@@ -507,63 +492,59 @@ class PMSimulator {
     }
 
     /**
-     * Create leaderboard session row when game starts
+     * Start loop that checks for player inactivity and finalizes session if needed
      */
-    async startLeaderboardSession() {
-        if (this.leaderboardSessionId !== null) {
-            return;
-        }
-
-        try {
-            const row = await this.leaderboard.createSession(
-                this.playerName,
-                this.gameState?.score ?? 0,
-                this.gameState?.level ?? 1,
-                this.gameState?.totalTasksCompleted ?? 0
-            );
-
-            if (row && typeof row.id !== 'undefined' && row.id !== null) {
-                this.leaderboardSessionId = row.id;
+    startIdleCheckLoop() {
+        if (this.idleCheckInterval) return;
+        this.idleCheckInterval = setInterval(() => {
+            if (!this.gameState || this.sessionSavedToLeaderboard) {
+                return;
             }
+            if (!this.lastActionTimestamp) return;
+
+            const now = Date.now();
+            const idleMs = now - this.lastActionTimestamp;
+            const IDLE_THRESHOLD_MS = 20000; // 20 секунд
+
+            if (idleMs >= IDLE_THRESHOLD_MS) {
+                this.saveFinalScoreIfNeeded('idle');
+            }
+        }, 1000);
+    }
+
+    /**
+     * Write per-action snapshot into log table (does not affect leaderboard)
+     */
+    async saveActionLog() {
+        try {
+            if (!this.gameState) return;
+            const score = this.gameState.score;
+            const level = this.gameState.level;
+            const tasksCompleted = this.gameState.totalTasksCompleted;
+            await this.leaderboard.addLogEntry(this.playerName, score, level, tasksCompleted);
         } catch (error) {
-            console.warn('Failed to start leaderboard session:', error);
+            console.warn('Failed to write leaderboard_log entry:', error);
         }
     }
 
     /**
-     * Save current progress to leaderboard after each player action
+     * Save final result to leaderboard once per session
      */
-    async saveProgress() {
+    async saveFinalScoreIfNeeded(reason = 'unknown') {
         try {
+            if (this.sessionSavedToLeaderboard) return;
             if (!this.gameState) return;
 
-            const score = this.gameState.score;
-            const level = this.gameState.level;
-            const tasksCompleted = this.gameState.totalTasksCompleted;
+            await this.leaderboard.addScore(
+                this.playerName,
+                this.gameState.score,
+                this.gameState.level,
+                this.gameState.totalTasksCompleted
+            );
 
-            // Обновляем одну и ту же строку сессии в leaderboard.
-            // Если сессия ещё не создана (leaderboardSessionId = null), создаём её один раз.
-            if (this.leaderboardSessionId !== null) {
-                await this.leaderboard.updateSession(
-                    this.leaderboardSessionId,
-                    this.playerName,
-                    score,
-                    level,
-                    tasksCompleted
-                );
-            } else {
-                const row = await this.leaderboard.createSession(
-                    this.playerName,
-                    score,
-                    level,
-                    tasksCompleted
-                );
-                if (row && typeof row.id !== 'undefined' && row.id !== null) {
-                    this.leaderboardSessionId = row.id;
-                }
-            }
+            this.sessionSavedToLeaderboard = true;
         } catch (error) {
-            console.warn('Failed to save progress to leaderboard:', error);
+            console.warn(`Failed to save final score to leaderboard (reason=${reason}):`, error);
         }
     }
     
@@ -773,8 +754,9 @@ class PMSimulator {
             }
         }, 400);
         
-        // Persist progress after successful action
-        this.saveProgress();
+        // Update activity timestamp and write log entry
+        this.lastActionTimestamp = Date.now();
+        this.saveActionLog();
         
         // Check for level up
         const shouldLevel = shouldLevelUp(
@@ -816,8 +798,9 @@ class PMSimulator {
             }
         }, 400);
         
-        // Persist progress after failed action (стрик/состояние изменились)
-        this.saveProgress();
+        // Update activity timestamp and write log entry
+        this.lastActionTimestamp = Date.now();
+        this.saveActionLog();
     }
     
     /**
@@ -858,8 +841,9 @@ class PMSimulator {
             }
         }, 500);
         
-        // Persist progress after timeout (жизни/статус изменились)
-        this.saveProgress();
+        // Update activity timestamp and write log entry
+        this.lastActionTimestamp = Date.now();
+        this.saveActionLog();
         
         // Trigger game over if needed
         if (gameOver) {
@@ -922,8 +906,8 @@ class PMSimulator {
             this.dragDropManager.cancelDrag();
         }
         
-        // Ensure latest progress is saved to leaderboard
-        await this.saveProgress();
+        // Ensure final score is saved to leaderboard once
+        await this.saveFinalScoreIfNeeded('game_over');
         
         // Get player rank
         const rank = this.leaderboard.getPlayerRank(this.playerName);
@@ -961,8 +945,8 @@ class PMSimulator {
             'success'
         );
         
-        // Ensure latest progress is saved to leaderboard
-        await this.saveProgress();
+        // Ensure final score is saved to leaderboard once
+        await this.saveFinalScoreIfNeeded('game_complete');
         
         // Get player rank
         const rank = this.leaderboard.getPlayerRank(this.playerName);

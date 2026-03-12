@@ -139,6 +139,46 @@ export class Leaderboard {
     }
 
     /**
+     * Add a log entry to a separate table (per-action progress snapshots)
+     * Table (in Supabase) is expected to be: leaderboard_log
+     * Columns: player_name (text), score (int), level (int), tasks_completed (int), created_at (timestamp, default now()).
+     */
+    async addLogEntry(playerName, score, level, tasksCompleted) {
+        const name = (playerName || 'Аноним').trim();
+
+        if (!USE_SUPABASE) {
+            // В локальном режиме просто игнорируем лог
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/leaderboard_log`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        player_name: name,
+                        score: score,
+                        level: level,
+                        tasks_completed: tasksCompleted
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                console.warn('Failed to write leaderboard_log entry:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.warn('Error while writing leaderboard_log entry:', error);
+        }
+    }
+
+    /**
      * Create a persistent session entry when game starts.
      * Returns Supabase row (with id) when available.
      */
