@@ -540,8 +540,14 @@ class PMSimulator {
      */
     async saveFinalScoreIfNeeded(reason = 'unknown') {
         try {
+            // Если уже пытались сохранить результат в этой сессии — выходим сразу.
             if (this.sessionSavedToLeaderboard) return;
             if (!this.gameState) return;
+
+            // Ставим флаг ДО реального запроса,
+            // чтобы два параллельных вызова (beforeunload + hidden)
+            // не успели сделать двойную запись.
+            this.sessionSavedToLeaderboard = true;
 
             const useKeepalive = reason === 'beforeunload' || reason === 'hidden';
 
@@ -552,8 +558,6 @@ class PMSimulator {
                 this.gameState.totalTasksCompleted,
                 { keepalive: useKeepalive }
             );
-
-            this.sessionSavedToLeaderboard = true;
         } catch (error) {
             console.warn(`Failed to save final score to leaderboard (reason=${reason}):`, error);
         }
