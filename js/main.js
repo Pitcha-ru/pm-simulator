@@ -35,7 +35,7 @@ class PMSimulator {
 
         this.lastActionTimestamp = null;
         this.sessionSavedToLeaderboard = false;
-        this.idleCheckInterval = null; // больше не используется
+        this.idleCheckInterval = null;
         this.sessionId = null;
         this.unloadHandlersInitialized = false;
         
@@ -487,6 +487,7 @@ class PMSimulator {
             : `sess-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         this.lastActionTimestamp = Date.now();
         this.sessionSavedToLeaderboard = false;
+        this.startIdleCheckLoop();
         
         // Setup game UI
         this.setupGameUI();
@@ -521,6 +522,28 @@ class PMSimulator {
     }
 
     /**
+     * Start loop that checks for player inactivity (30 seconds) and finalizes session if needed.
+     * Работает только пока вкладка открыта; при закрытии вкладки срабатывают beforeunload/hidden.
+     */
+    startIdleCheckLoop() {
+        if (this.idleCheckInterval) return;
+        this.idleCheckInterval = setInterval(() => {
+            if (!this.gameState || this.sessionSavedToLeaderboard) {
+                return;
+            }
+            if (!this.lastActionTimestamp) return;
+
+            const now = Date.now();
+            const idleMs = now - this.lastActionTimestamp;
+            const IDLE_THRESHOLD_MS = 30000; // 30 секунд
+
+            if (idleMs >= IDLE_THRESHOLD_MS) {
+                this.saveFinalScoreIfNeeded('idle_30s');
+            }
+        }, 1000);
+    }
+
+    /**
      * Write per-action snapshot into log table (does not affect leaderboard)
      */
     async saveActionLog() {
@@ -548,6 +571,12 @@ class PMSimulator {
             // чтобы два параллельных вызова (beforeunload + hidden)
             // не успели сделать двойную запись.
             this.sessionSavedToLeaderboard = true;
+
+            // Останавливаем idle-таймер, если он крутится
+            if (this.idleCheckInterval) {
+                clearInterval(this.idleCheckInterval);
+                this.idleCheckInterval = null;
+            }
 
             const useKeepalive = reason === 'beforeunload' || reason === 'hidden';
 
