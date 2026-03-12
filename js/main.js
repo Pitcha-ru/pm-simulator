@@ -541,14 +541,27 @@ class PMSimulator {
             const level = this.gameState.level;
             const tasksCompleted = this.gameState.totalTasksCompleted;
 
-            // Просто создаём новую запись-снимок прогресса в leaderboard на каждом сохранении.
-            // Это надёжнее, чем PATCH существующей строки, с учётом возможных RLS-политик.
-            await this.leaderboard.addScore(
-                this.playerName,
-                score,
-                level,
-                tasksCompleted
-            );
+            // Обновляем одну и ту же строку сессии в leaderboard.
+            // Если сессия ещё не создана (leaderboardSessionId = null), создаём её один раз.
+            if (this.leaderboardSessionId !== null) {
+                await this.leaderboard.updateSession(
+                    this.leaderboardSessionId,
+                    this.playerName,
+                    score,
+                    level,
+                    tasksCompleted
+                );
+            } else {
+                const row = await this.leaderboard.createSession(
+                    this.playerName,
+                    score,
+                    level,
+                    tasksCompleted
+                );
+                if (row && typeof row.id !== 'undefined' && row.id !== null) {
+                    this.leaderboardSessionId = row.id;
+                }
+            }
         } catch (error) {
             console.warn('Failed to save progress to leaderboard:', error);
         }
