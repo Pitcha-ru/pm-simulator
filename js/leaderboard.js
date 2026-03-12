@@ -143,7 +143,7 @@ export class Leaderboard {
      * Table (in Supabase) is expected to be: leaderboard_log
      * Columns: player_name (text), score (int), level (int), tasks_completed (int), created_at (timestamp, default now()).
      */
-    async addLogEntry(playerName, score, level, tasksCompleted) {
+    async addLogEntry(playerName, score, level, tasksCompleted, sessionId = null) {
         const name = (playerName || 'Аноним').trim();
 
         if (!USE_SUPABASE) {
@@ -165,7 +165,8 @@ export class Leaderboard {
                         player_name: name,
                         score: score,
                         level: level,
-                        tasks_completed: tasksCompleted
+                        tasks_completed: tasksCompleted,
+                        session_id: sessionId
                     })
                 }
             );

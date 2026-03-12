@@ -35,7 +35,9 @@ class PMSimulator {
 
         this.lastActionTimestamp = null;
         this.sessionSavedToLeaderboard = false;
-        this.idleCheckInterval = null;
+        this.idleCheckInterval = null; // больше не используется
+        this.sessionId = null;
+        this.unloadHandlersInitialized = false;
         
         this.init();
     }
@@ -75,6 +77,9 @@ class PMSimulator {
 
             // Setup base UI
             this.setupBaseUI();
+
+            // Setup handlers for saving result on tab close/visibility change
+            this.setupUnloadHandlers();
 
             // Try to prefill player name from chat_id in URL / onboard_user_progress
             // #region agent log
@@ -476,10 +481,12 @@ class PMSimulator {
         // Initialize game state
         this.gameState = new GameState(this.gameData);
 
-        // Initialize activity tracking for this session
+        // Initialize activity tracking and session id for this session
+        this.sessionId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `sess-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         this.lastActionTimestamp = Date.now();
         this.sessionSavedToLeaderboard = false;
-        this.startIdleCheckLoop();
         
         // Setup game UI
         this.setupGameUI();
@@ -492,24 +499,25 @@ class PMSimulator {
     }
 
     /**
-     * Start loop that checks for player inactivity and finalizes session if needed
+     * Register handlers to save final score when tab/window is being closed
+     * or page becomes hidden.
      */
-    startIdleCheckLoop() {
-        if (this.idleCheckInterval) return;
-        this.idleCheckInterval = setInterval(() => {
-            if (!this.gameState || this.sessionSavedToLeaderboard) {
-                return;
-            }
-            if (!this.lastActionTimestamp) return;
+    setupUnloadHandlers() {
+        if (this.unloadHandlersInitialized) return;
+        this.unloadHandlersInitialized = true;
 
-            const now = Date.now();
-            const idleMs = now - this.lastActionTimestamp;
-            const IDLE_THRESHOLD_MS = 20000; // 20 секунд
+        // Best-effort save on tab close / reload
+        window.addEventListener('beforeunload', () => {
+            // Не ждём промис, просто инициируем сохранение
+            this.saveFinalScoreIfNeeded('beforeunload');
+        });
 
-            if (idleMs >= IDLE_THRESHOLD_MS) {
-                this.saveFinalScoreIfNeeded('idle');
+        // Дополнительно — при скрытии вкладки (переключение, закрытие в некоторых браузерах)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.saveFinalScoreIfNeeded('hidden');
             }
-        }, 1000);
+        });
     }
 
     /**
@@ -521,7 +529,7 @@ class PMSimulator {
             const score = this.gameState.score;
             const level = this.gameState.level;
             const tasksCompleted = this.gameState.totalTasksCompleted;
-            await this.leaderboard.addLogEntry(this.playerName, score, level, tasksCompleted);
+            await this.leaderboard.addLogEntry(this.playerName, score, level, tasksCompleted, this.sessionId);
         } catch (error) {
             console.warn('Failed to write leaderboard_log entry:', error);
         }
