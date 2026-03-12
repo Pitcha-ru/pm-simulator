@@ -87,31 +87,40 @@ export class Leaderboard {
     
     /**
      * Add a new score to Supabase
+     * options.keepalive = true — использовать fetch keepalive (например, при beforeunload)
      */
-    async addScore(playerName, score, level, tasksCompleted) {
+    async addScore(playerName, score, level, tasksCompleted, options = {}) {
         const name = (playerName || 'Аноним').trim();
+        const { keepalive = false } = options;
         
         // Legacy method: creates a new leaderboard entry (used as fallback)
         if (USE_SUPABASE) {
             try {
                 // Добавляем в Supabase
+                const fetchOptions = {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({
+                        player_name: name,
+                        score: score,
+                        level: level,
+                        tasks_completed: tasksCompleted
+                    })
+                };
+
+                // keepalive нужен для случаев закрытия вкладки (beforeunload / hidden)
+                if (keepalive) {
+                    fetchOptions.keepalive = true;
+                }
+
                 const response = await fetch(
                     `${SUPABASE_URL}/rest/v1/leaderboard`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=representation'
-                        },
-                        body: JSON.stringify({
-                            player_name: name,
-                            score: score,
-                            level: level,
-                            tasks_completed: tasksCompleted
-                        })
-                    }
+                    fetchOptions
                 );
                 
                 if (!response.ok) {

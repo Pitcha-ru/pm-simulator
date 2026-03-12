@@ -543,11 +543,14 @@ class PMSimulator {
             if (this.sessionSavedToLeaderboard) return;
             if (!this.gameState) return;
 
+            const useKeepalive = reason === 'beforeunload' || reason === 'hidden';
+
             await this.leaderboard.addScore(
                 this.playerName,
                 this.gameState.score,
                 this.gameState.level,
-                this.gameState.totalTasksCompleted
+                this.gameState.totalTasksCompleted,
+                { keepalive: useKeepalive }
             );
 
             this.sessionSavedToLeaderboard = true;
