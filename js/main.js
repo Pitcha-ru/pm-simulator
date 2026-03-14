@@ -10,7 +10,7 @@ import { DragDropManager } from './dragDrop.js';
 import { Leaderboard } from './leaderboard.js';
 import { calculateScore, updateStreakMultiplier, shouldLevelUp } from './gameLogic.js';
 
-// Supabase config for onboard_user_progress (separate project)
+// Supabase config for telegram_user_progress (separate project)
 const ONBOARD_SUPABASE_URL =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ONBOARD_SUPABASE_URL) || '';
 const ONBOARD_SUPABASE_ANON_KEY =
@@ -81,7 +81,7 @@ class PMSimulator {
             // Setup handlers for saving result on tab close/visibility change
             this.setupUnloadHandlers();
 
-            // Try to prefill player name from chat_id in URL / onboard_user_progress
+            // Try to prefill player name from chat_id in URL / telegram_user_progress
             // #region agent log
             fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
                 method: 'POST',
@@ -180,7 +180,7 @@ class PMSimulator {
     }
 
     /**
-     * Load name from onboard_user_progress table in separate Supabase project
+     * Load name from telegram_user_progress table in separate Supabase project
      * Returns display name string (firstName lastName or fallback) or null
      */
     async fetchOnboardChatId(chatId) {
@@ -211,7 +211,7 @@ class PMSimulator {
 
         try {
             const selectParam = encodeURIComponent('chat_id,"firstName","lastName"');
-            const url = `${ONBOARD_SUPABASE_URL}/rest/v1/onboard_user_progress?chat_id=eq.${encodeURIComponent(
+            const url = `${ONBOARD_SUPABASE_URL}/rest/v1/telegram_user_progress?chat_id=eq.${encodeURIComponent(
                 chatId
             )}&select=${selectParam}&order=updated_at.desc&limit=1`;
 
@@ -227,7 +227,7 @@ class PMSimulator {
                     runId: 'pre-fix',
                     hypothesisId: 'H4',
                     location: 'main.js:fetchOnboardChatId:beforeFetch',
-                    message: 'About to fetch onboard_user_progress',
+                    message: 'About to fetch telegram_user_progress',
                     data: { url, chatId },
                     timestamp: Date.now()
                 })
@@ -243,7 +243,7 @@ class PMSimulator {
             });
 
             if (!response.ok) {
-                console.warn('Failed to fetch onboard_user_progress:', response.status, response.statusText);
+                console.warn('Failed to fetch telegram_user_progress:', response.status, response.statusText);
 
                 // #region agent log
                 fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
@@ -257,7 +257,7 @@ class PMSimulator {
                         runId: 'pre-fix',
                         hypothesisId: 'H4',
                         location: 'main.js:fetchOnboardChatId:responseNotOk',
-                        message: 'onboard_user_progress fetch failed',
+                        message: 'telegram_user_progress fetch failed',
                         data: {
                             status: response.status,
                             statusText: response.statusText
@@ -283,7 +283,7 @@ class PMSimulator {
                         runId: 'pre-fix',
                         hypothesisId: 'H5',
                         location: 'main.js:fetchOnboardChatId:emptyData',
-                        message: 'No rows returned from onboard_user_progress',
+                        message: 'No rows returned from telegram_user_progress',
                         data: { length: Array.isArray(data) ? data.length : null },
                         timestamp: Date.now()
                     })
@@ -351,7 +351,7 @@ class PMSimulator {
             
             return String(row.chat_id);
         } catch (err) {
-            console.warn('Error while fetching onboard_user_progress:', err);
+            console.warn('Error while fetching telegram_user_progress:', err);
 
             // #region agent log
             fetch('http://127.0.0.1:7409/ingest/3429f9b2-993d-4811-8dfa-1256bffca5b6', {
@@ -365,7 +365,7 @@ class PMSimulator {
                     runId: 'pre-fix',
                     hypothesisId: 'H4',
                     location: 'main.js:fetchOnboardChatId:catch',
-                    message: 'Exception while fetching onboard_user_progress',
+                    message: 'Exception while fetching telegram_user_progress',
                     data: { error: String(err && err.message ? err.message : err) },
                     timestamp: Date.now()
                 })
@@ -376,7 +376,7 @@ class PMSimulator {
     }
 
     /**
-     * Try to prefill player name using chat_id from URL and onboard_user_progress.
+     * Try to prefill player name using chat_id from URL and telegram_user_progress.
      * Returns true if name was prefilled, false otherwise.
      */
     async tryPrefillNameFromOnboardChatId() {
@@ -446,7 +446,7 @@ class PMSimulator {
                 runId: 'pre-fix',
                 hypothesisId: 'H6',
                 location: 'main.js:tryPrefill:success',
-                message: 'Prefilled player name from onboard_user_progress',
+                message: 'Prefilled player name from telegram_user_progress',
                 data: { onboardName },
                 timestamp: Date.now()
             })
