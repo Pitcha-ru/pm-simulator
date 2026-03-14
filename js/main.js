@@ -210,7 +210,8 @@ class PMSimulator {
         }
 
         try {
-            const selectParam = encodeURIComponent('chat_id,"firstName","lastName"');
+            // telegram_user_progress использует snake_case: first_name, last_name
+            const selectParam = encodeURIComponent('chat_id,first_name,last_name');
             const url = `${ONBOARD_SUPABASE_URL}/rest/v1/telegram_user_progress?chat_id=eq.${encodeURIComponent(
                 chatId
             )}&select=${selectParam}&order=updated_at.desc&limit=1`;
@@ -330,17 +331,17 @@ class PMSimulator {
                     message: 'Successfully fetched onboard user record',
                     data: {
                         chatIdFromTable: row.chat_id,
-                        firstName: row.firstName ?? null,
-                        lastName: row.lastName ?? null
+                        first_name: row.first_name ?? null,
+                        last_name: row.last_name ?? null
                     },
                     timestamp: Date.now()
                 })
             }).catch(() => {});
             // #endregion agent log
             
-            // Prefer "firstName lastName" for display; fall back to firstName, then chat_id
-            const rawFirstName = row.firstName;
-            const rawLastName = row.lastName;
+            // telegram_user_progress: first_name, last_name (snake_case)
+            const rawFirstName = row.first_name;
+            const rawLastName = row.last_name;
             
             if (rawFirstName != null && String(rawFirstName).trim() !== '') {
                 const first = String(rawFirstName).trim();
